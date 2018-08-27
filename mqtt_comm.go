@@ -3,7 +3,7 @@ package mqtt_comm
 type CMqttComm interface {
 	Connect(isReConnect bool)
 	SetMessageBus(host string, port int, username string, userpwd string)
-	Subscribe(action string, topic string, qos int, handler CHandler) error
+	Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error
 	UnSubscribe(action string, topic string) error
 	Send(action string, topic string, request string, qos int, timeout int) (response string, err error)
 	Get(topic string, request string, qos int, timeout int) (response string, err error)

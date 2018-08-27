@@ -17,6 +17,11 @@ type CSubscribeInfo struct {
 	qos   byte
 }
 
+type CHandlerInfo struct {
+	handler CHandler
+	user    interface{}
+}
+
 var m_chanMap sync.Map
 var m_handleMap sync.Map
 var m_subscribeTopics sync.Map
@@ -100,8 +105,8 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 				// fmt.Println("handler map not found")
 				return
 			}
-			handler := v.(CHandler)
-			response, err := handler.Handle(top, string(message.Payload()), m_this)
+			handlerInfo := v.(CHandlerInfo)
+			response, err := handlerInfo.handler.Handle(top, string(message.Payload()), m_this, handlerInfo.user)
 			if err != nil {
 				return
 			}
@@ -126,13 +131,14 @@ func (this *CMqttCommImplement) subscribe() {
 	m_client = MQTT.NewClient(this.m_connOption)
 }
 
-func (this *CMqttCommImplement) Subscribe(action string, topic string, qos int, handler CHandler) error {
+func (this *CMqttCommImplement) Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error {
 	length := len(topic)
 	end := []byte(topic)[length-1]
 	if string(end) != "/" {
 		topic += "/"
 	}
-	m_handleMap.Store(topic, handler)
+	handlerInfo := CHandlerInfo{handler: handler, user: user}
+	m_handleMap.Store(topic, handlerInfo)
 	// fmt.Println("push back: " + topic)
 	top := GetSubscribeUri(action, topic)
 	subscribeInfo := CSubscribeInfo{topic: top, qos: byte(qos)}
