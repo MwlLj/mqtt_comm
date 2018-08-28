@@ -3,8 +3,8 @@ package mqtt_comm
 import (
 	"crypto/tls"
 	"errors"
-	"github.com/MwlLj/mqtt_comm/randtool"
 	// "fmt"
+	"github.com/MwlLj/mqtt_comm/randtool"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"strconv"
 	"strings"
@@ -82,8 +82,11 @@ func (this *CMqttCommImplement) connect() {
 func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 	topic := message.Topic()
 	// fmt.Println("onSubscribeMessage: " + topic)
-	serverVersion, serverName, action, id, top := SpliteFullUri(topic)
-	if serverName == m_serverName && serverVersion == m_serverVersion {
+	serverVersion, serverName, action, id, top, length := SpliteFullUri(topic)
+	if serverName != m_serverName || serverVersion != m_serverVersion {
+		return
+	}
+	if length == 5 {
 		// recv response
 		go func() {
 			// fmt.Println("get id: " + id)

@@ -31,7 +31,7 @@ func GetFullUri(serverVersion string, serverName string, action string, topic st
 	return strings.Join([]string{"/", serverVersion, "/", serverName, "/", action, "/", id, "/", topic}, "")
 }
 
-func SpliteFullUri(uri string) (serverVersion string, serverName string, action string, id string, topic string) {
+func SpliteFullUri(uri string) (serverVersion string, serverName string, action string, id string, topic string, size int) {
 	strs := strings.Split(uri, "/")
 	var top string
 	length := len(strs)
@@ -41,7 +41,7 @@ func SpliteFullUri(uri string) (serverVersion string, serverName string, action 
 			top += "/"
 		}
 	}
-	return strs[1], strs[2], strs[3], strs[4], top
+	return strs[1], strs[2], strs[3], strs[4], top, length
 }
 
 func SpliteResponseUri(uri string) (action string, id string) {
