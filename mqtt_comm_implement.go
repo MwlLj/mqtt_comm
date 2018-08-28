@@ -22,30 +22,30 @@ type CHandlerInfo struct {
 	user    interface{}
 }
 
-var m_chanMap sync.Map
-var m_handleMap sync.Map
-var m_subscribeTopics sync.Map
-var m_serverName string
-var m_serverVersion string
-var m_client MQTT.Client
-var m_recvQos int
-var m_this *CMqttCommImplement
-
 type CMqttCommImplement struct {
-	m_connOption *MQTT.ClientOptions
+	m_chanMap         sync.Map
+	m_handleMap       sync.Map
+	m_subscribeTopics sync.Map
+	m_serverName      string
+	m_serverVersion   string
+	m_client          MQTT.Client
+	m_recvQos         int
+	m_connOption      *MQTT.ClientOptions
 }
 
+var globThisMap sync.Map
+
 func (this *CMqttCommImplement) Init(serverName string, versionNo string, recvQos int) {
-	m_serverName = serverName
-	m_serverVersion = versionNo
-	m_recvQos = recvQos
-	m_this = this
+	this.m_serverName = serverName
+	this.m_serverVersion = versionNo
+	this.m_recvQos = recvQos
 }
 
 func (this *CMqttCommImplement) SetMessageBus(host string, port int, username string, userpwd string) {
 	server := strings.Join([]string{"tcp://", host, ":", strconv.Itoa(port)}, "")
-	// clientId := randtool.GetOrderRandStr("clientid")
-	clientId := m_serverName
+	clientId := randtool.GetOrderRandStr("clientid")
+	// clientId := m_serverName
+	globThisMap.Store(clientId, this)
 	this.m_connOption = MQTT.NewClientOptions().AddBroker(server).SetClientID(clientId).SetCleanSession(true)
 	if username != "" {
 		this.m_connOption.SetUsername(username)
@@ -60,7 +60,7 @@ func (this *CMqttCommImplement) SetMessageBus(host string, port int, username st
 func (this *CMqttCommImplement) Connect(isReConnect bool) {
 	if isReConnect {
 		for {
-			if m_client == nil || m_client.IsConnected() == false {
+			if this.m_client == nil || this.m_client.IsConnected() == false {
 				// fmt.Println("isconnect is false")
 				this.connect()
 			} else {
@@ -75,22 +75,30 @@ func (this *CMqttCommImplement) Connect(isReConnect bool) {
 
 func (this *CMqttCommImplement) connect() {
 	this.subscribe()
-	token := m_client.Connect()
+	token := this.m_client.Connect()
 	token.Wait()
 }
 
 func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
+	optionReader := client.OptionsReader()
+	clientId := optionReader.ClientID()
+	thisValue, thisErr := globThisMap.Load(clientId)
+	if !thisErr {
+		// fmt.Println("this not found")
+		return
+	}
+	this := thisValue.(*CMqttCommImplement)
 	topic := message.Topic()
 	// fmt.Println("onSubscribeMessage: " + topic)
 	serverVersion, serverName, action, id, top, length := SpliteFullUri(topic)
-	if serverName != m_serverName || serverVersion != m_serverVersion {
+	if serverName != this.m_serverName || serverVersion != this.m_serverVersion {
 		return
 	}
 	if length == 5 {
 		// recv response
 		go func() {
 			// fmt.Println("get id: " + id)
-			v, r := m_chanMap.Load(id)
+			v, r := this.m_chanMap.Load(id)
 			if !r {
 				// fmt.Println("chanMap not found")
 				return
@@ -102,36 +110,36 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 		go func() {
 			// fmt.Printf("recv subscribe message, topic: %s, payload: %s \n", topic, message.Payload())
 			// recv subscribe topic
-			v, r := m_handleMap.Load(top)
+			v, r := this.m_handleMap.Load(top)
 			// fmt.Println("get: " + top)
 			if !r {
 				// fmt.Println("handler map not found")
 				return
 			}
 			handlerInfo := v.(CHandlerInfo)
-			response, err := handlerInfo.handler.Handle(top, string(message.Payload()), m_this, handlerInfo.user)
+			response, err := handlerInfo.handler.Handle(top, string(message.Payload()), this, handlerInfo.user)
 			if err != nil {
 				return
 			}
 			// fmt.Println("send response: " + GetResponseTopic(m_serverVersion, m_serverName, action, id))
 			// m_client.Publish(GetResponseTopic(m_serverVersion, m_serverName, action, id), byte(qos), false, response)
-			m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(m_recvQos), false, response)
+			this.m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(this.m_recvQos), false, response)
 		}()
 	}
 }
 
 func (this *CMqttCommImplement) subscribe() {
 	this.m_connOption.OnConnect = func(c MQTT.Client) {
-		m_subscribeTopics.Range(func(k, v interface{}) bool {
+		this.m_subscribeTopics.Range(func(k, v interface{}) bool {
 			value := v.(CSubscribeInfo)
 			token := c.Subscribe(k.(string), value.qos, onSubscribeMessage)
 			token.Wait()
 			return true
 		})
-		token := c.Subscribe(GetResponseUri(m_serverVersion, m_serverName), byte(1), onSubscribeMessage)
+		token := c.Subscribe(GetResponseUri(this.m_serverVersion, this.m_serverName), byte(1), onSubscribeMessage)
 		token.Wait()
 	}
-	m_client = MQTT.NewClient(this.m_connOption)
+	this.m_client = MQTT.NewClient(this.m_connOption)
 }
 
 func (this *CMqttCommImplement) Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error {
@@ -141,11 +149,11 @@ func (this *CMqttCommImplement) Subscribe(action string, topic string, qos int, 
 		topic += "/"
 	}
 	handlerInfo := CHandlerInfo{handler: handler, user: user}
-	m_handleMap.Store(topic, handlerInfo)
+	this.m_handleMap.Store(topic, handlerInfo)
 	// fmt.Println("push back: " + topic)
 	top := GetSubscribeUri(action, topic)
 	subscribeInfo := CSubscribeInfo{topic: top, qos: byte(qos)}
-	m_subscribeTopics.Store(top, subscribeInfo)
+	this.m_subscribeTopics.Store(top, subscribeInfo)
 	// fmt.Println("subscribe: " + top)
 	return nil
 }
@@ -156,27 +164,27 @@ func (this *CMqttCommImplement) UnSubscribe(action string, topic string) error {
 	if string(end) != "/" {
 		topic += "/"
 	}
-	m_handleMap.Delete(topic)
+	this.m_handleMap.Delete(topic)
 	top := GetSubscribeUri(action, topic)
-	m_subscribeTopics.Delete(top)
+	this.m_subscribeTopics.Delete(top)
 	return nil
 }
 
 func (this *CMqttCommImplement) Send(action string, topic string, request string, qos int, timeout int) (response string, err error) {
 	id := randtool.GetOrderRandStr("sessionid")
 	ch := make(chan string)
-	m_chanMap.Store(id, ch)
+	this.m_chanMap.Store(id, ch)
 	// fmt.Println("push back id: " + id)
 	// fmt.Println("send topic: " + GetFullUri(m_serverVersion, m_serverName, action, topic, id))
-	m_client.Publish(GetFullUri(m_serverVersion, m_serverName, action, topic, id), byte(qos), false, request)
+	this.m_client.Publish(GetFullUri(this.m_serverVersion, this.m_serverName, action, topic, id), byte(qos), false, request)
 	select {
 	case response := <-ch:
 		// fmt.Println("delete id: " + id)
-		m_chanMap.Delete(id)
+		this.m_chanMap.Delete(id)
 		return response, nil
 	case <-time.After(time.Duration(timeout) * time.Second):
 		// fmt.Println("timeout delete id: " + id)
-		m_chanMap.Delete(id)
+		this.m_chanMap.Delete(id)
 		return "", errors.New("timeout")
 	}
 	return "", nil
