@@ -90,7 +90,7 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 	this := thisValue.(*CMqttCommImplement)
 	topic := message.Topic()
 	// fmt.Println("onSubscribeMessage: " + topic)
-	serverVersion, serverName, action, id, top, length := SpliteFullUri(topic)
+	serverVersion, serverName, action, id, top, _ := SpliteFullUri(topic)
 	if serverName == this.m_serverName && serverVersion == this.m_serverVersion {
 		// recv response
 		go func() {
