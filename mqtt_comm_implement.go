@@ -91,10 +91,7 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 	topic := message.Topic()
 	// fmt.Println("onSubscribeMessage: " + topic)
 	serverVersion, serverName, action, id, top, length := SpliteFullUri(topic)
-	if serverName != this.m_serverName || serverVersion != this.m_serverVersion {
-		return
-	}
-	if length == 5 {
+	if serverName == this.m_serverName && serverVersion == this.m_serverVersion {
 		// recv response
 		go func() {
 			// fmt.Println("get id: " + id)
