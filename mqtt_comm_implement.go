@@ -89,9 +89,10 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 	}
 	this := thisValue.(*CMqttCommImplement)
 	topic := message.Topic()
-	// fmt.Println("onSubscribeMessage: " + topic)
-	serverVersion, serverName, action, id, top, _ := SpliteFullUri(topic)
-	if serverName == this.m_serverName && serverVersion == this.m_serverVersion {
+	// fmt.Println("onSubscribeMessage: "+topic, ", content: ", message.Payload())
+	serverVersion, serverName, action, id, top, length := SpliteFullUri(topic)
+	// if serverName == this.m_serverName && serverVersion == this.m_serverVersion {
+	if length == 5 {
 		// recv response
 		go func() {
 			// fmt.Println("get id: " + id)
@@ -103,7 +104,7 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 			ch := v.(chan string)
 			ch <- string(message.Payload())
 		}()
-	} else {
+	} else if length > 5 {
 		go func() {
 			// fmt.Printf("recv subscribe message, topic: %s, payload: %s \n", topic, message.Payload())
 			// recv subscribe topic
@@ -114,12 +115,8 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 				return
 			}
 			handlerInfo := v.(CHandlerInfo)
-			response, err := handlerInfo.handler.Handle(top, string(message.Payload()), this, handlerInfo.user)
-			if err != nil {
-				return
-			}
-			// fmt.Println("send response: " + GetResponseTopic(m_serverVersion, m_serverName, action, id))
-			// m_client.Publish(GetResponseTopic(m_serverVersion, m_serverName, action, id), byte(qos), false, response)
+			response, _ := handlerInfo.handler.Handle(top, string(message.Payload()), this, handlerInfo.user)
+			// fmt.Println("send response topic: "+GetResponseTopic(serverVersion, serverName, action, id), ", response: ", response)
 			this.m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(this.m_recvQos), false, response)
 		}()
 	}
@@ -134,6 +131,7 @@ func (this *CMqttCommImplement) subscribe() {
 			return true
 		})
 		token := c.Subscribe(GetResponseUri(this.m_serverVersion, this.m_serverName), byte(1), onSubscribeMessage)
+		// fmt.Println("subscribe: " + GetResponseUri(this.m_serverVersion, this.m_serverName))
 		token.Wait()
 	}
 	this.m_client = MQTT.NewClient(this.m_connOption)
@@ -172,7 +170,7 @@ func (this *CMqttCommImplement) Send(action string, topic string, request string
 	ch := make(chan string)
 	this.m_chanMap.Store(id, ch)
 	// fmt.Println("push back id: " + id)
-	// fmt.Println("send topic: " + GetFullUri(m_serverVersion, m_serverName, action, topic, id))
+	// fmt.Println("send topic: " + GetFullUri(this.m_serverVersion, this.m_serverName, action, topic, id))
 	this.m_client.Publish(GetFullUri(this.m_serverVersion, this.m_serverName, action, topic, id), byte(qos), false, request)
 	select {
 	case response := <-ch:
