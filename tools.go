@@ -5,6 +5,15 @@ import (
 	"strings"
 )
 
+func JoinActionTopic(action string, topic string) string {
+	return strings.Join([]string{action, topic}, "_")
+}
+
+func SplitActionTopic(key string) (ac string, top string) {
+	strs := strings.Split(key, "_")
+	return strs[0], strings.Join(strs[1:], "")
+}
+
 func GetResponseTopic(serverVersion string, serverName string, action string, id string) string {
 	return strings.Join([]string{"/", serverVersion, "/", serverName, "/", action, "/", id}, "")
 }
