@@ -108,7 +108,7 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 		go func() {
 			// fmt.Printf("recv subscribe message, topic: %s, payload: %s \n", topic, message.Payload())
 			// recv subscribe topic
-			v, r := this.m_handleMap.Load(top)
+			v, r := this.m_handleMap.Load(JoinActionTopic(action, top))
 			// fmt.Println("get: " + top)
 			if !r {
 				// fmt.Println("handler map not found")
@@ -144,7 +144,7 @@ func (this *CMqttCommImplement) Subscribe(action string, topic string, qos int, 
 		topic += "/"
 	}
 	handlerInfo := CHandlerInfo{handler: handler, user: user}
-	this.m_handleMap.Store(topic, handlerInfo)
+	this.m_handleMap.Store(JoinActionTopic(action, topic), handlerInfo)
 	// fmt.Println("push back: " + topic)
 	top := GetSubscribeUri(action, topic)
 	subscribeInfo := CSubscribeInfo{topic: top, qos: byte(qos)}
@@ -159,7 +159,7 @@ func (this *CMqttCommImplement) UnSubscribe(action string, topic string) error {
 	if string(end) != "/" {
 		topic += "/"
 	}
-	this.m_handleMap.Delete(topic)
+	this.m_handleMap.Delete(JoinActionTopic(action, topic))
 	top := GetSubscribeUri(action, topic)
 	this.m_subscribeTopics.Delete(top)
 	return nil
