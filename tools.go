@@ -11,7 +11,7 @@ func JoinActionTopic(action string, topic string) string {
 
 func SplitActionTopic(key string) (ac string, top string) {
 	strs := strings.Split(key, "_")
-	return strs[0], strings.Join(strs[1:], "")
+	return strs[0], strings.Join(strs[1:], "_")
 }
 
 func GetResponseTopic(serverVersion string, serverName string, action string, id string) string {
