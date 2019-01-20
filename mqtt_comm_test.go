@@ -23,7 +23,7 @@ func TestMqttComm(t *testing.T) {
 type MyHandler struct {
 }
 
-func (*MyHandler) Handle(topic *string, action *string, request *string, mc CMqttComm, user interface{}) (response *string, err error) {
+func (*MyHandler) Handle(topic *string, action *string, request *string, qos int, mc CMqttComm, user interface{}) (response *string, err error) {
 	mc.Get("1.0/test", "hello", 0, 10)
 	return nil, errors.New("")
 }
