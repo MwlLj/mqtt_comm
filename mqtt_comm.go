@@ -1,18 +1,20 @@
 package mqtt_comm
 
 var (
-	POST    string = "POST"
-	PUT     string = "PUT"
-	GET     string = "GET"
-	DELETE  string = "DELETE"
-	UPDATED string = "UPDATED"
-	DELETED string = "DELETED"
-	ALL     string = "+"
+	POST      string = "POST"
+	PUT       string = "PUT"
+	GET       string = "GET"
+	DELETE    string = "DELETE"
+	UPDATED   string = "UPDATED"
+	DELETED   string = "DELETED"
+	actionALL string = "+"
+	topicAll  string = "#"
 )
 
 type CMqttComm interface {
 	Connect(isReConnect bool)
 	SetMessageBus(host string, port int, username string, userpwd string)
+	SubscribeAll(qos int, handler CHandler, user interface{}) error
 	Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error
 	UnSubscribe(action string, topic string) error
 	Send(action string, topic string, request string, qos int, timeout int) (response string, err error)

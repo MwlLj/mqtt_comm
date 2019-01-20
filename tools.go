@@ -31,6 +31,10 @@ func GetSubscribeUri(action string, topic string) string {
 	return strings.Join([]string{"/+/+/", action, "/+/", topic}, "")
 }
 
+func GetSubscribeUriWithoutEnd(action string, topic string) string {
+	return strings.Join([]string{"/+/+/", action, "/+/", topic}, "")
+}
+
 func GetFullUri(serverVersion string, serverName string, action string, topic string, id string) string {
 	length := len(topic)
 	end := []byte(topic)[length-1]

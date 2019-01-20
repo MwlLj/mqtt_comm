@@ -3,7 +3,7 @@ package mqtt_comm
 import (
 	"crypto/tls"
 	"errors"
-	// "fmt"
+	"fmt"
 	"github.com/MwlLj/mqtt_comm/randtool"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"strconv"
@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 )
+
+var _ = fmt.Println
 
 type CSubscribeInfo struct {
 	topic string
@@ -23,14 +25,15 @@ type CHandlerInfo struct {
 }
 
 type CMqttCommImplement struct {
-	m_chanMap         sync.Map
-	m_handleMap       sync.Map
-	m_subscribeTopics sync.Map
-	m_serverName      string
-	m_serverVersion   string
-	m_client          MQTT.Client
-	m_recvQos         int
-	m_connOption      *MQTT.ClientOptions
+	m_chanMap              sync.Map
+	m_handleMap            sync.Map
+	m_subscribeTopics      sync.Map
+	m_listenAllHandlerInfo *CHandlerInfo
+	m_serverName           string
+	m_serverVersion        string
+	m_client               MQTT.Client
+	m_recvQos              int
+	m_connOption           *MQTT.ClientOptions
 }
 
 var globThisMap sync.Map
@@ -110,14 +113,21 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 			// recv subscribe topic
 			v, r := this.m_handleMap.Load(JoinActionTopic(action, top))
 			// fmt.Println("get: " + top)
+			var handlerInfo *CHandlerInfo
 			if !r {
 				// fmt.Println("handler map not found")
-				return
+				if this.m_listenAllHandlerInfo != nil {
+					handlerInfo = this.m_listenAllHandlerInfo
+				}
+			} else {
+				info := v.(CHandlerInfo)
+				handlerInfo = &info
 			}
-			handlerInfo := v.(CHandlerInfo)
-			response, _ := handlerInfo.handler.Handle(top, string(message.Payload()), this, handlerInfo.user)
-			// fmt.Println("send response topic: "+GetResponseTopic(serverVersion, serverName, action, id), ", response: ", response)
-			this.m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(this.m_recvQos), false, response)
+			if handlerInfo != nil {
+				response, _ := handlerInfo.handler.Handle(top, string(message.Payload()), this, handlerInfo.user)
+				// fmt.Println("send response topic: "+GetResponseTopic(serverVersion, serverName, action, id), ", response: ", response)
+				this.m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(this.m_recvQos), false, response)
+			}
 		}()
 	}
 }
@@ -126,6 +136,7 @@ func (this *CMqttCommImplement) subscribe() {
 	this.m_connOption.OnConnect = func(c MQTT.Client) {
 		this.m_subscribeTopics.Range(func(k, v interface{}) bool {
 			value := v.(CSubscribeInfo)
+			// fmt.Println(k.(string), value)
 			token := c.Subscribe(k.(string), value.qos, onSubscribeMessage)
 			token.Wait()
 			return true
@@ -135,6 +146,21 @@ func (this *CMqttCommImplement) subscribe() {
 		token.Wait()
 	}
 	this.m_client = MQTT.NewClient(this.m_connOption)
+}
+
+func (this *CMqttCommImplement) SubscribeAll(qos int, handler CHandler, user interface{}) error {
+	handlerInfo := CHandlerInfo{
+		handler: handler,
+		user:    user,
+	}
+	top := GetSubscribeUriWithoutEnd(actionALL, topicAll)
+	subscribeInfo := CSubscribeInfo{
+		topic: top,
+		qos:   byte(qos),
+	}
+	this.m_subscribeTopics.Store(top, subscribeInfo)
+	this.m_listenAllHandlerInfo = &handlerInfo
+	return nil
 }
 
 func (this *CMqttCommImplement) Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error {
