@@ -124,9 +124,13 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 				handlerInfo = &info
 			}
 			if handlerInfo != nil {
-				response, _ := handlerInfo.handler.Handle(top, string(message.Payload()), this, handlerInfo.user)
+				payload := string(message.Payload())
+				response, err := handlerInfo.handler.Handle(&top, &action, &payload, this, handlerInfo.user)
 				// fmt.Println("send response topic: "+GetResponseTopic(serverVersion, serverName, action, id), ", response: ", response)
-				this.m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(this.m_recvQos), false, response)
+				if err != nil || response == nil {
+					return
+				}
+				this.m_client.Publish(GetResponseTopic(serverVersion, serverName, action, id), byte(this.m_recvQos), false, *response)
 			}
 		}()
 	}
