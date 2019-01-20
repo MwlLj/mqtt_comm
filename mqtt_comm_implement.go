@@ -125,7 +125,7 @@ func onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
 			}
 			if handlerInfo != nil {
 				payload := string(message.Payload())
-				response, err := handlerInfo.handler.Handle(&top, &action, &payload, this, handlerInfo.user)
+				response, err := handlerInfo.handler.Handle(&top, &action, &payload, int(message.Qos()), this, handlerInfo.user)
 				// fmt.Println("send response topic: "+GetResponseTopic(serverVersion, serverName, action, id), ", response: ", response)
 				if err != nil || response == nil {
 					return
