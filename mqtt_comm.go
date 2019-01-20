@@ -7,6 +7,7 @@ var (
 	DELETE  string = "DELETE"
 	UPDATED string = "UPDATED"
 	DELETED string = "DELETED"
+	ALL     string = "+"
 )
 
 type CMqttComm interface {
