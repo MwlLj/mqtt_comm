@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/MwlLj/mqtt_comm/randtool"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/satori/go.uuid"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,9 @@ func (this *CMqttCommImplement) Init(serverName string, versionNo string, recvQo
 
 func (this *CMqttCommImplement) SetMessageBus(host string, port int, username string, userpwd string) {
 	server := strings.Join([]string{"tcp://", host, ":", strconv.Itoa(port)}, "")
-	clientId := randtool.GetOrderRandStr("clientid")
+	uid, _ := uuid.NewV4()
+	// clientId := randtool.GetOrderRandStr("clientid")
+	clientId := uid.String()
 	// clientId := m_serverName
 	globThisMap.Store(clientId, this)
 	this.m_connOption = MQTT.NewClientOptions().AddBroker(server).SetClientID(clientId).SetCleanSession(true)
