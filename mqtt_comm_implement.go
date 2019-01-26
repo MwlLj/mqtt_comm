@@ -45,6 +45,10 @@ func (this *CMqttCommImplement) Init(serverName string, versionNo string, recvQo
 	this.m_recvQos = recvQos
 }
 
+func (this *CMqttCommImplement) IsConnect() bool {
+	return this.m_client.IsConnected()
+}
+
 func (this *CMqttCommImplement) SetMessageBus(host string, port int, username string, userpwd string) {
 	server := strings.Join([]string{"tcp://", host, ":", strconv.Itoa(port)}, "")
 	uid, _ := uuid.NewV4()
