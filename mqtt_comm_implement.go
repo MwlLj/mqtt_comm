@@ -1,6 +1,7 @@
 package mqtt_comm
 
 import (
+	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -159,12 +160,18 @@ func (this *CMqttCommImplement) subscribe() {
 	this.m_client = MQTT.NewClient(this.m_connOption)
 }
 
-func (this *CMqttCommImplement) SubscribeAll(qos int, handler CHandler, user interface{}) error {
+func (this *CMqttCommImplement) SubscribeAll(extraField *string, qos int, handler CHandler, user interface{}) error {
 	handlerInfo := CHandlerInfo{
 		handler: handler,
 		user:    user,
 	}
-	top := GetSubscribeUriWithoutEnd(actionALL, topicAll)
+	var buffer bytes.Buffer
+	if extraField != nil && *extraField != "" {
+		buffer.WriteString(*extraField)
+		buffer.WriteString("/")
+	}
+	buffer.WriteString(topicAll)
+	top := GetSubscribeUriWithoutEnd(actionALL, buffer.String())
 	subscribeInfo := CSubscribeInfo{
 		topic: top,
 		qos:   byte(qos),

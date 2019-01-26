@@ -14,7 +14,7 @@ var (
 type CMqttComm interface {
 	Connect(isReConnect bool)
 	SetMessageBus(host string, port int, username string, userpwd string)
-	SubscribeAll(qos int, handler CHandler, user interface{}) error
+	SubscribeAll(extraField *string, qos int, handler CHandler, user interface{}) error
 	Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error
 	UnSubscribe(action string, topic string) error
 	IsConnect() bool
