@@ -209,48 +209,50 @@ func (this *CMqttCommImplement) UnSubscribe(action string, topic string) error {
 	return nil
 }
 
-func (this *CMqttCommImplement) Send(action string, topic string, request string, qos int, timeout int) (response string, err error) {
+func (this *CMqttCommImplement) Send(action string, topic string, request string, isWait bool, qos int, timeout int) (response string, err error) {
 	id := randtool.GetOrderRandStr("sessionid")
 	ch := make(chan string)
 	this.m_chanMap.Store(id, ch)
 	// fmt.Println("push back id: " + id)
 	// fmt.Println("send topic: " + GetFullUri(this.m_serverVersion, this.m_serverName, action, topic, id))
 	this.m_client.Publish(GetFullUri(this.m_serverVersion, this.m_serverName, action, topic, id), byte(qos), false, request)
-	select {
-	case response := <-ch:
-		// fmt.Println("delete id: " + id)
-		this.m_chanMap.Delete(id)
-		return response, nil
-	case <-time.After(time.Duration(timeout) * time.Second):
-		// fmt.Println("timeout delete id: " + id)
-		this.m_chanMap.Delete(id)
-		return "", errors.New("timeout")
+	if isWait == true {
+		select {
+		case response := <-ch:
+			// fmt.Println("delete id: " + id)
+			this.m_chanMap.Delete(id)
+			return response, nil
+		case <-time.After(time.Duration(timeout) * time.Second):
+			// fmt.Println("timeout delete id: " + id)
+			this.m_chanMap.Delete(id)
+			return "", errors.New("timeout")
+		}
 	}
 	return "", nil
 }
 
 func (this *CMqttCommImplement) Get(topic string, request string, qos int, timeout int) (response string, err error) {
-	return this.Send("GET", topic, request, qos, timeout)
+	return this.Send("GET", topic, request, true, qos, timeout)
 }
 
 func (this *CMqttCommImplement) Post(topic string, request string, qos int, timeout int) (response string, err error) {
-	return this.Send("POST", topic, request, qos, timeout)
+	return this.Send("POST", topic, request, true, qos, timeout)
 }
 
 func (this *CMqttCommImplement) Put(topic string, request string, qos int, timeout int) (response string, err error) {
-	return this.Send("PUT", topic, request, qos, timeout)
+	return this.Send("PUT", topic, request, true, qos, timeout)
 }
 
 func (this *CMqttCommImplement) Delete(topic string, request string, qos int, timeout int) (response string, err error) {
-	return this.Send("DELETE", topic, request, qos, timeout)
+	return this.Send("DELETE", topic, request, true, qos, timeout)
 }
 
 func (this *CMqttCommImplement) Updated(topic string, request string, qos int) error {
-	this.Send("UPDATED", topic, request, qos, 0)
+	this.Send("UPDATED", topic, request, false, qos, 0)
 	return nil
 }
 
 func (this *CMqttCommImplement) Deleted(topic string, request string, qos int) error {
-	this.Send("DELETED", topic, request, qos, 0)
+	this.Send("DELETED", topic, request, false, qos, 0)
 	return nil
 }

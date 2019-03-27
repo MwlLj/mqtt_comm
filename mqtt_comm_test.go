@@ -12,7 +12,7 @@ func TestMqttComm(t *testing.T) {
 	mqttComm.SetMessageBus("127.0.0.1", 51883, "", "")
 	mqttComm.Connect(false)
 	go func() {
-		recv, _ := mqttComm.Send("GET", "test", "hello", 1, 60)
+		recv, _ := mqttComm.Send("GET", "test", "hello", true, 1, 60)
 		fmt.Println("recv: " + recv)
 	}()
 	for {

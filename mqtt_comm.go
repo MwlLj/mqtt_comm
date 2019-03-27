@@ -18,7 +18,7 @@ type CMqttComm interface {
 	Subscribe(action string, topic string, qos int, handler CHandler, user interface{}) error
 	UnSubscribe(action string, topic string) error
 	IsConnect() bool
-	Send(action string, topic string, request string, qos int, timeout int) (response string, err error)
+	Send(action string, topic string, request string, isWait bool, qos int, timeout int) (response string, err error)
 	Get(topic string, request string, qos int, timeout int) (response string, err error)
 	Post(topic string, request string, qos int, timeout int) (response string, err error)
 	Put(topic string, request string, qos int, timeout int) (response string, err error)
